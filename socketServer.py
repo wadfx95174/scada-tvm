@@ -109,7 +109,7 @@ class ServerThread(Thread):
 # connect TBAS and send data to TBAS
 def connectTBAS():
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-    context.load_verify_locations("./certificate.pem")
+    context.load_verify_locations("./key/certificate.pem")
     context.options |= (ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2)
     with context.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)) as ssock:
         try:
@@ -135,7 +135,7 @@ def connectTBAS():
 def main():
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     # load private key and certificate file
-    context.load_cert_chain("./certificate.pem", "./privkey.pem")
+    context.load_cert_chain("./key/certificate.pem", "./key/privkey.pem")
     # prohibit the use of TLSv1.0, TLgSv1.1, TLSv1.2 -> use TLSv1.3
     context.options |= (ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2)
 

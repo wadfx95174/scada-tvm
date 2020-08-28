@@ -4,7 +4,7 @@ PORT = 8001
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLS)
 # load private key and certificate file
-context.load_cert_chain("./certificate.pem", "./privkey.pem")
+context.load_cert_chain("./key/certificate.pem", "./key/privkey.pem")
 # prohibit the use of TLSv1.0, TLSv1.1, TLSv1.2 -> use TLSv1.3
 context.options |= (ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2)
 
