@@ -11,14 +11,12 @@ import modbus_tk
 
 # address enumerate
 class AddrType(Enum):
-    PI_IP_eth0 = "192.168.3.102"
-    PI_IP_eht1 = "192.168.4.102"
+    PI_IP_eth0 = "192.168.1.102"
+    PI_IP_eht1 = "192.168.2.102"
     PI_PORT = 8001
-    TBAS_IP_eth0 = "192.168.1.100"
-    TBAS_IP_eth1 = "192.168.2.100"
+    TBAS_IP = "192.168.1.100"
     TBAS_PORT = 8001
-    CP_IP_eth0 = "140.116.164.141"
-    CP_IP_eth1 = "192.168.1.101"
+    CP_IP = "192.168.1.101"
     CP_PORT = 8001
 
 # temporary database
@@ -45,19 +43,19 @@ class ServerThread(Thread):
             print ("From", self._addr, ": " + dataFromTBASorCP.decode("utf-8"))
             
             # connect by TBAS
-            if self._addr[0] == AddrType.TBAS_IP_eth1.value:
+            if self._addr[0] == AddrType.TBAS_IP.value:
                 jwtFromTBAS = dataFromTBASorCP
                 self._conn.sendall("Pi got TBAS's Token.".encode("utf-8"))
                 self._conn.close()
                 print(self._addr, "disconnect!")
                 break
             # connect by control program
-            elif self._addr[0] == AddrType.CP_IP_eth1.value:
+            elif self._addr[0] == AddrType.CP_IP.value:
                 # "JWT from TBAS" and "JWT from control program" are the same
                 if jwtFromTBAS == dataFromTBASorCP:
                     try:
                         decodedData = jwt.decode(dataFromTBASorCP, jwt.decode(dataFromTBASorCP, verify=False)["public_key"].encode("utf-8")
-                            , issuer=AddrType.TBAS_IP_eth0.value, audience=self._addr[0], algorithm='RS256')
+                            , issuer=AddrType.TBAS_IP.value, audience=self._addr[0], algorithm='RS256')
                         print(decodedData)
                         self._conn.sendall("Legal".encode("utf-8"))
 
@@ -141,7 +139,7 @@ def connectTBAS(response):
     with context.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)) as sock:
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.connect((AddrType.TBAS_IP_eth0.value, AddrType.TBAS_PORT.value))
+            sock.connect((AddrType.TBAS_IP.value, AddrType.TBAS_PORT.value))
             dic = {}
             # dic["account"] = input("Please enter your account : ")
             # dic["passwd"] = input("Please enter your password : ")
@@ -149,7 +147,7 @@ def connectTBAS(response):
             # dic["passwd"] = "123"
             dic["hostname"] = socket.gethostname()
             dic["mac_addr"] = uuid.UUID(int = uuid.getnode()).hex[-12:]
-            dic["CP_ip"] = AddrType.CP_IP_eth1.value
+            dic["CP_ip"] = AddrType.CP_IP.value
             dic["CP_port"] = AddrType.CP_PORT.value
             dic["response"] = response
 
