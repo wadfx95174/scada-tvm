@@ -59,10 +59,10 @@ class ServerThread(Thread):
                         #     self._conn.close()
                         #     print(self._addr, "disconnect!")
                         responseFromDevice = json.dumps((1234, 2234, 3234))
-                        response = dataFromTBASorCP.decode("utf-8") + "+++++" +responseFromDevice
-                        print(response)
+                        # response = dataFromTBASorCP.decode("utf-8") + "+++++" +responseFromDevice
+                        # print(response)
                         # time.sleep(12)
-                        self._conn.sendall(bytes(response, encoding="utf-8"))
+                        self._conn.sendall(bytes(responseFromDevice, encoding="utf-8"))
 
                         # # wait for feadback of control program
                         # dataFromCP = self._conn.recv(1024).decode("utf-8")
@@ -107,7 +107,7 @@ class ServerThread(Thread):
                         self._conn.sendall("The time of the Token was issued which is error.".encode("utf-8"))
                 else:
                     self._conn.sendall("Your Token is illegal.".encode("utf-8"))
-
+                print(self._addr, "disconnect!")
                 break
             # if control program send "close", then close connection
             if dataFromTBASorCP.decode("utf-8") == "close":

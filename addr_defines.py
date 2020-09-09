@@ -1,14 +1,14 @@
 
 # for real experiment
 # CP_IP_eth0 = "140.116.164.141"
-# CP_IP = "192.168.1.101"
+# CP_IP = "192.168.2.101"
 # CP_PORT = 8001
-# TBAS_IP = "192.168.1.100"
+# TBAS_IP = "192.168.2.100"
 # TBAS_PORT = 8001
-# PI_IP_eth0 = "192.168.1.102"
-# PI_IP_eht1 = "192.168.2.102"
+# PI_IP_eth0 = "192.168.2.102"
+# PI_IP_eht1 = "192.168.3.102"
 # PI_PORT = 8001
-# CONVERTER_IP = "192.168.2.105"
+# CONVERTER_IP = "192.168.3.105"
 # CONVERTER_PORT = "502"
 
 # for vm experiment
