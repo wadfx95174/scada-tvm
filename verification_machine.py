@@ -10,8 +10,10 @@ import modbus_tk.defines as cst
 import modbus_tk
 import addr_defines
 
-# JWT from TBAS
-jwtFromTBAS = b''
+# JWT from TTAS(CP)
+jwtFromTTAS = b''
+# JWT from TTAS(TVM)
+jwtFromTTAS_TVM = b''
 
 # thread class
 class ServerThread(Thread):
@@ -22,30 +24,30 @@ class ServerThread(Thread):
         self._addr = addr
         
     def run(self):
-        global jwtFromTBAS
+        global jwtFromTTAS
         while True:
-            dataFromTBASorCP = self._conn.recv(2048)
-            print ("From", self._addr, ": " + dataFromTBASorCP.decode("utf-8"))
+            dataFromTTASorCP = self._conn.recv(2048)
+            print ("From", self._addr, ": " + dataFromTTASorCP.decode("utf-8"))
             
-            # connect by TBAS
-            if self._addr[0] == addr_defines.TBAS_IP:
-                jwtFromTBAS = dataFromTBASorCP
-                self._conn.sendall("Pi got TBAS's Token.".encode("utf-8"))
+            # connect by TTAS
+            if self._addr[0] == addr_defines.TTAS_IP:
+                jwtFromTTAS = dataFromTTASorCP
+                self._conn.sendall("TVM got TTAS's Token.".encode("utf-8"))
                 self._conn.close()
                 print(self._addr, "disconnect!")
                 break
             # connect by control program
             elif self._addr[0] == addr_defines.CP_IP:
-                # "JWT from TBAS" and "JWT from control program" are the same
-                if jwtFromTBAS == dataFromTBASorCP:
+                # "JWT from TTAS" and "JWT from control program" are the same
+                if jwtFromTTAS == dataFromTTASorCP:
                     try:
-                        decodedData = jwt.decode(dataFromTBASorCP, jwt.decode(dataFromTBASorCP, verify=False)["public_key"].encode("utf-8")
-                            , issuer=addr_defines.TBAS_IP, audience=self._addr[0], algorithm='RS256')
+                        decodedData = jwt.decode(dataFromTTASorCP, jwt.decode(dataFromTTASorCP, verify=False)["public_key"].encode("utf-8")
+                            , issuer=addr_defines.TTAS_IP, audience=self._addr[0], algorithm='RS256')
                         print(decodedData)
                         self._conn.sendall("Legal".encode("utf-8"))
 
-                        """ Pi send request to device for request data or control device,
-                            Pi send data(with token) obtained from device to control program """
+                        """ TVM send request to device for request data or control device,
+                            TVM send data(with token) obtained from device to control program """
                         # master = modbus_tcp.TcpMaster(decodedData["converter_ip"], decodedData["converter_port"])
                         # try:
                         #     response = master.execute(slave=1, function_code=cst.READ_INPUT_REGISTERS, starting_address=0, quantity_of_x=3)
@@ -59,32 +61,32 @@ class ServerThread(Thread):
                         #     self._conn.close()
                         #     print(self._addr, "disconnect!")
                         responseFromDevice = json.dumps((1234, 2234, 3234))
-                        # response = dataFromTBASorCP.decode("utf-8") + "+++++" +responseFromDevice
-                        # print(response)
+                        response = jwtFromTTAS_TVM + "+++++" +responseFromDevice
+                        print("response", response)
                         # time.sleep(12)
-                        self._conn.sendall(bytes(responseFromDevice, encoding="utf-8"))
+                        self._conn.sendall(bytes(response, encoding="utf-8"))
 
-                        # # wait for feadback of control program
-                        # dataFromCP = self._conn.recv(1024).decode("utf-8")
+                        # wait for feadback of control program
+                        feadbackFromCP = self._conn.recv(1024).decode("utf-8")
                         
-                        # connectTBAS(response)
-                        # self._conn.sendall(jwtFromTBAS)
-                        # dataFromCP = self._conn.recv(1024).decode("utf-8")
+                        # connectTTAS()
+                        # self._conn.sendall(jwtFromTTAS_TVM)
+                        # feadbackFromCP = self._conn.recv(1024).decode("utf-8")
                         
-                        # while True:
+                        while True:
                             
-                        #     # Token from Pi is legal
-                        #     if dataFromCP == "close":
-                        #         print("Token from Pi is legal.")
-                        #         self._conn.close()
-                        #         print(self._addr, "disconnect!")
-                        #         break
-                        #     # Token from Pi is illegal, resend verification information to TBAS
-                        #     else:
-                        #         print("Token from Pi is illegal.")
-                        #         connectTBAS(response)
-                        #         self._conn.sendall(jwtFromTBAS)
-                        #         dataFromCP = self._conn.recv(1024).decode("utf-8")
+                            # Token from TVM is legal
+                            if feadbackFromCP == "close":
+                                print("Token from TVM is legal.")
+                                self._conn.close()
+                                print(self._addr, "disconnect!")
+                                break
+                            # Token from TVM is illegal, resend verification information to TTAS
+                            else:
+                                print("Token from TVM is illegal.")
+                                connectTTAS()
+                                self._conn.sendall(jwtFromTTAS_TVM)
+                                feadbackFromCP = self._conn.recv(1024).decode("utf-8")
 
                         
                     except jwt.InvalidSignatureError:
@@ -110,31 +112,31 @@ class ServerThread(Thread):
                 print(self._addr, "disconnect!")
                 break
             # if control program send "close", then close connection
-            if dataFromTBASorCP.decode("utf-8") == "close":
+            if dataFromTTASorCP.decode("utf-8") == "close":
                 self._conn.close()
                 print(self._addr, "disconnect!")
                 break
 
-# connect TBAS and send data to TBAS
-def connectTBAS(response):
+# connect TTAS and send data to TTAS
+def connectTTAS():
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_verify_locations("./key/certificate.pem")
     context.options |= (ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2)
     with context.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)) as sock:
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.connect((addr_defines.TBAS_IP, addr_defines.TBAS_PORT))
+            sock.connect((addr_defines.TTAS_IP, addr_defines.TTAS_PORT))
             dic = {}
             dic["hostname"] = socket.gethostname()
             dic["mac_addr"] = uuid.UUID(int = uuid.getnode()).hex[-12:]
             dic["CP_ip"] = addr_defines.CP_IP
             dic["CP_port"] = addr_defines.CP_PORT
-            dic["response"] = response
+            # dic["response"] = response
 
             sock.sendall(bytes(json.dumps(dic), encoding="utf-8"))
-            dataFromTBAS = sock.recv(2048)
-            global jwtFromTBAS
-            jwtFromTBAS = dataFromTBAS
+            dataFromTTAS = sock.recv(2048)
+            global jwtFromTTAS_TVM
+            jwtFromTTAS_TVM = dataFromTTAS
 
             sock.sendall("close".encode("utf-8"))
 
@@ -142,6 +144,9 @@ def connectTBAS(response):
             print ("Connect error")
 
 def main():
+
+    connectTTAS()
+
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     # load private key and certificate file
     context.load_cert_chain("./key/certificate.pem", "./key/privkey.pem")
@@ -151,9 +156,9 @@ def main():
     # open, bind, listen socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((addr_defines.PI_IP, addr_defines.PI_PORT))
+        sock.bind((addr_defines.TVM_IP, addr_defines.TVM_PORT))
         sock.listen(5)
-        print ("Server start at: %s:%s" %(addr_defines.PI_IP, addr_defines.PI_PORT))
+        print ("Server start at: %s:%s" %(addr_defines.TVM_IP, addr_defines.TVM_PORT))
         print ("Wait for connection...")
 
         with context.wrap_socket(sock, server_side=True) as ssock:
