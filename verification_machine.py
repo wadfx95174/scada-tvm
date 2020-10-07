@@ -46,7 +46,7 @@ class ServerThread(Thread):
             elif self._addr[0] == addr_defines.CP_IP:
                 
                 s = dataFromTTASorCP.decode("utf-8").split("+++++")
-                print(dataFromTTASorCP.decode("utf-8"))
+                # print(dataFromTTASorCP.decode("utf-8"))
                 jwtFromCP = s[0].encode("utf-8")
                 sensorDicFromCP = json.loads(s[1])
 
@@ -55,7 +55,7 @@ class ServerThread(Thread):
                     try:
                         decodedData = jwt.decode(jwtFromCP, jwt.decode(jwtFromCP, verify=False)["public_key"].encode("utf-8")
                             , issuer=addr_defines.TTAS_IP, audience=self._addr[0], algorithm='RS256')
-                        print(decodedData)
+                        # print(decodedData)
                         self._conn.sendall("Legal".encode("utf-8"))
 
                         """ TVM send request to device for request data or control device,
@@ -159,8 +159,6 @@ def connectTTAS():
     context.options |= (ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2)
     with context.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)) as sock:
         try:
-            # avoid continuous port occupation
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.connect((addr_defines.TTAS_IP, addr_defines.TTAS_PORT))
 
             global dic
@@ -171,6 +169,7 @@ def connectTTAS():
             jwtFromTTAS_TVM = dataFromTTAS
 
             sock.sendall("close".encode("utf-8"))
+            sock.close()
 
         except socket.error:
             print ("Connect error")
@@ -201,7 +200,7 @@ def main():
                     # multi-thread
                     newThread = ServerThread(conn, addr)
                     newThread.start()
-                    newThread.join()
+                    # newThread.join()
                     
                 except KeyboardInterrupt:
                     break
