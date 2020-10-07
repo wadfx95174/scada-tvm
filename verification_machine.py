@@ -32,12 +32,18 @@ class ServerThread(Thread):
     def run(self):
         global jwtFromTTAS_CP
         while True:
-            dataFromTTASorCP = self._conn.recv(2048)
-            print ("From", self._addr, ": " + dataFromTTASorCP.decode("utf-8"))
-            
+            dataFromTTASorCP = self._conn.recv(2048).decode("utf-8")
+            print ("From", self._addr, ": " + dataFromTTASorCP)
+
+            # if control program send "close", then close connection
+            if dataFromTTASorCP == "close":
+                self._conn.close()
+                print(self._addr, "disconnect!")
+                break
+
             # connect by TTAS
             if self._addr[0] == addr_defines.TTAS_IP:
-                jwtFromTTAS_CP = dataFromTTASorCP
+                jwtFromTTAS_CP = dataFromTTASorCP.encode("utf-8")
                 self._conn.sendall("TVM got TTAS's Token.".encode("utf-8"))
                 self._conn.close()
                 print(self._addr, "disconnect!")
@@ -45,8 +51,8 @@ class ServerThread(Thread):
             # connect by control program
             elif self._addr[0] == addr_defines.CP_IP:
                 
-                s = dataFromTTASorCP.decode("utf-8").split("+++++")
-                # print(dataFromTTASorCP.decode("utf-8"))
+                s = dataFromTTASorCP.split("+++++")
+                # print(dataFromTTASorCP)
                 jwtFromCP = s[0].encode("utf-8")
                 sensorDicFromCP = json.loads(s[1])
 
@@ -146,11 +152,7 @@ class ServerThread(Thread):
                 else:
                     self._conn.sendall("Token from control program is illegal.".encode("utf-8"))
 
-            # if control program send "close", then close connection
-            if dataFromTTASorCP.decode("utf-8") == "close":
-                self._conn.close()
-                print(self._addr, "disconnect!")
-                break
+            
 
 # connect TTAS and send data to TTAS
 def connectTTAS():
