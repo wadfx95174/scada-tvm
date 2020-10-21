@@ -33,12 +33,12 @@ class ServerThread(Thread):
         global jwtFromTTAS_CP
         while True:
             dataFromTTASorCP = self._conn.recv(2048).decode("utf-8")
-            print ("From", self._addr, ": " + dataFromTTASorCP)
+            # print ("From", self._addr, ": " + dataFromTTASorCP)
 
             # if control program send "close", then close connection
             if dataFromTTASorCP == "close":
                 self._conn.close()
-                print(self._addr, "disconnect!")
+                # print(self._addr, "disconnect!")
                 break
 
             # connect by TTAS
@@ -46,7 +46,7 @@ class ServerThread(Thread):
                 jwtFromTTAS_CP = dataFromTTASorCP.encode("utf-8")
                 self._conn.sendall("TVM got TTAS's Token.".encode("utf-8"))
                 self._conn.close()
-                print(self._addr, "disconnect!")
+                # print(self._addr, "disconnect!")
                 break
             # connect by control program
             elif self._addr[0] == addr_defines.CP_IP:
@@ -117,14 +117,14 @@ class ServerThread(Thread):
                             
                             # Token from TVM is legal
                             if feadbackFromCP == "close":
-                                print("Token from TVM is legal.")
+                                # print("Token from TVM is legal.")
                                 # self._conn.close()
                                 # print(self._addr, "disconnect!")
                                 break
 
                             # Token from TVM is illegal, resend verification information to TTAS
                             else:
-                                print(feadbackFromCP)
+                                # print(feadbackFromCP)
                                 connectTTAS()
                                 response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps(responseFromDevice)).encode("utf-8")
                                 # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps((1234, 2234, 3234))).encode("utf-8")
@@ -132,22 +132,22 @@ class ServerThread(Thread):
                                 feadbackFromCP = self._conn.recv(1024).decode("utf-8")
 
                     except jwt.InvalidSignatureError:
-                        print("Signature verification failed.")
+                        # print("Signature verification failed.")
                         self._conn.sendall("Signature verification failed.".encode("utf-8"))
                     except jwt.DecodeError:
-                        print("Decode Error.")
+                        # print("Decode Error.")
                         self._conn.sendall("Decode Error.".encode("utf-8"))
                     except jwt.ExpiredSignatureError:
-                        print("Signature has expired.")
+                        # print("Signature has expired.")
                         self._conn.sendall("Signature has expired.".encode("utf-8"))
                     except jwt.InvalidAudienceError:
-                        print("Audience is error.")
+                        # print("Audience is error.")
                         self._conn.sendall("Audience is error.".encode("utf-8"))
                     except jwt.InvalidIssuerError:
-                        print("Issue is error.")
+                        # print("Issue is error.")
                         self._conn.sendall("Issue is error.".encode("utf-8"))
                     except jwt.InvalidIssuedAtError:
-                        print("The time of the Token was issued which is error.")
+                        # print("The time of the Token was issued which is error.")
                         self._conn.sendall("The time of the Token was issued which is error.".encode("utf-8"))
                 else:
                     self._conn.sendall("Token from control program is illegal.".encode("utf-8"))
@@ -192,8 +192,8 @@ def main():
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((addr_defines.TVM_IP, addr_defines.TVM_PORT))
         sock.listen(5)
-        print ("Server start at: %s:%s" %(addr_defines.TVM_IP, addr_defines.TVM_PORT))
-        print ("Wait for connection...")
+        # print ("Server start at: %s:%s" %(addr_defines.TVM_IP, addr_defines.TVM_PORT))
+        # print ("Wait for connection...")
 
         with context.wrap_socket(sock, server_side=True) as ssock:
             while True:
