@@ -91,8 +91,6 @@ class ServerThread(Thread):
                         self._conn.sendall(json.dumps(responseFromDevice).encode("utf-8"))
                         # self._conn.sendall(json.dumps((1234, 2234, 3234)).encode("utf-8"))
                         feadbackFromCP = self._conn.recv(1024).decode("utf-8")
-                        if feadbackFromCP == "close":
-                            break
 
                         '''
                         TVM with Token
