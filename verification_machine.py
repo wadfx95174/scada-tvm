@@ -66,30 +66,30 @@ class ServerThread(Thread):
 
                         """ TVM send request to device for request data or control device,
                             TVM send data(with token) obtained from device to control program """
-                        # master = modbus_tcp.TcpMaster(sensorDicFromCP["converter_ip"], sensorDicFromCP["converter_port"])
-                        # try:
-                        #     responseFromDevice = master.execute(
-                        #         slave=sensorDicFromCP["slave_id"]
-                        #         , function_code=sensorDicFromCP["function_code"]
-                        #         , starting_address=sensorDicFromCP["starting_address"]
-                        #         , quantity_of_x=sensorDicFromCP["quantity_of_x"])
-                        #     # print(responseFromDevice)
+                        master = modbus_tcp.TcpMaster(sensorDicFromCP["converter_ip"], sensorDicFromCP["converter_port"])
+                        try:
+                            responseFromDevice = master.execute(
+                                slave=sensorDicFromCP["slave_id"]
+                                , function_code=sensorDicFromCP["function_code"]
+                                , starting_address=sensorDicFromCP["starting_address"]
+                                , quantity_of_x=sensorDicFromCP["quantity_of_x"])
+                            # print(responseFromDevice)
 
-                        # except modbus_tk.modbus.ModbusError as exc:
-                        #     print("%s- Code=%d", exc, exc.get_exception_code())
-                        #     self._conn.close()
-                        #     print(self._addr, "disconnect!")
+                        except modbus_tk.modbus.ModbusError as exc:
+                            print("%s- Code=%d", exc, exc.get_exception_code())
+                            self._conn.close()
+                            print(self._addr, "disconnect!")
 
-                        # except modbus_tcp.ModbusInvalidMbapError as exc:
-                        #     print(exc)
-                        #     self._conn.close()
-                        #     print(self._addr, "disconnect!")
+                        except modbus_tcp.ModbusInvalidMbapError as exc:
+                            print(exc)
+                            self._conn.close()
+                            print(self._addr, "disconnect!")
                             
                         '''
                         TVM without Token
                         '''
-                        # self._conn.sendall(json.dumps(responseFromDevice).encode("utf-8"))
-                        self._conn.sendall(json.dumps((1234, 2234, 3234)).encode("utf-8"))
+                        self._conn.sendall(json.dumps(responseFromDevice).encode("utf-8"))
+                        # self._conn.sendall(json.dumps((1234, 2234, 3234)).encode("utf-8"))
                         feadbackFromCP = self._conn.recv(1024).decode("utf-8")
                         if feadbackFromCP == "close":
                             break
