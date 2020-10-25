@@ -50,117 +50,146 @@ class ServerThread(Thread):
                 break
             # connect by control program
             elif self._addr[0] == addr_defines.CP_IP:
+                '''
+                only SSL socket
+                '''
+                dataFromTTASorCP = json.loads(dataFromTTASorCP)
+                master = modbus_tcp.TcpMaster(sensorDicFromCP["converter_ip"], sensorDicFromCP["converter_port"])
+                try:
+                    responseFromDevice = master.execute(
+                        slave=sensorDicFromCP["slave_id"]
+                        , function_code=sensorDicFromCP["function_code"]
+                        , starting_address=sensorDicFromCP["starting_address"]
+                        , quantity_of_x=sensorDicFromCP["quantity_of_x"])
+                    # print(responseFromDevice)
+
+                except modbus_tk.modbus.ModbusError as exc:
+                    print("%s- Code=%d", exc, exc.get_exception_code())
+                    self._conn.close()
+                    print(self._addr, "disconnect!")
+
+                except modbus_tcp.ModbusInvalidMbapError as exc:
+                    print(exc)
+                    self._conn.close()
+                    print(self._addr, "disconnect!")
+
+                self._conn.sendall(json.dumps(responseFromDevice).encode("utf-8"))
+                # self._conn.sendall(json.dumps((1234, 2234, 3234)).encode("utf-8"))
+                feadbackFromCP = self._conn.recv(1024).decode("utf-8")
                 
-                s = dataFromTTASorCP.split("+++++")
-                # print(dataFromTTASorCP)
-                jwtFromCP = s[0].encode("utf-8")
-                sensorDicFromCP = json.loads(s[1])
+                '''
+                other
+                '''
+                # s = dataFromTTASorCP.split("+++++")
+                # # print(dataFromTTASorCP)
+                # jwtFromCP = s[0].encode("utf-8")
+                # sensorDicFromCP = json.loads(s[1])
 
-                # "JWT from TTAS" and "JWT from control program" are the same
-                if jwtFromTTAS_CP == jwtFromCP:
-                    try:
-                        decodedData = jwt.decode(jwtFromCP, jwt.decode(jwtFromCP, verify=False)["public_key"].encode("utf-8")
-                            , issuer=addr_defines.TTAS_IP, audience=self._addr[0], algorithm='RS256')
-                        # print(decodedData)
-                        self._conn.sendall("Legal".encode("utf-8"))
+                # # "JWT from TTAS" and "JWT from control program" are the same
+                # if jwtFromTTAS_CP == jwtFromCP:
+                #     try:
+                #         decodedData = jwt.decode(jwtFromCP, jwt.decode(jwtFromCP, verify=False)["public_key"].encode("utf-8")
+                #             , issuer=addr_defines.TTAS_IP, audience=self._addr[0], algorithm='RS256')
+                #         # print(decodedData)
+                #         self._conn.sendall("Legal".encode("utf-8"))
 
-                        """ TVM send request to device for request data or control device,
-                            TVM send data(with token) obtained from device to control program """
-                        master = modbus_tcp.TcpMaster(sensorDicFromCP["converter_ip"], sensorDicFromCP["converter_port"])
-                        try:
-                            responseFromDevice = master.execute(
-                                slave=sensorDicFromCP["slave_id"]
-                                , function_code=sensorDicFromCP["function_code"]
-                                , starting_address=sensorDicFromCP["starting_address"]
-                                , quantity_of_x=sensorDicFromCP["quantity_of_x"])
-                            # print(responseFromDevice)
+                #         """ TVM send request to device for request data or control device,
+                #             TVM send data(with token) obtained from device to control program """
+                #         master = modbus_tcp.TcpMaster(sensorDicFromCP["converter_ip"], sensorDicFromCP["converter_port"])
+                #         try:
+                #             responseFromDevice = master.execute(
+                #                 slave=sensorDicFromCP["slave_id"]
+                #                 , function_code=sensorDicFromCP["function_code"]
+                #                 , starting_address=sensorDicFromCP["starting_address"]
+                #                 , quantity_of_x=sensorDicFromCP["quantity_of_x"])
+                #             # print(responseFromDevice)
 
-                        except modbus_tk.modbus.ModbusError as exc:
-                            print("%s- Code=%d", exc, exc.get_exception_code())
-                            self._conn.close()
-                            print(self._addr, "disconnect!")
+                #         except modbus_tk.modbus.ModbusError as exc:
+                #             print("%s- Code=%d", exc, exc.get_exception_code())
+                #             self._conn.close()
+                #             print(self._addr, "disconnect!")
 
-                        except modbus_tcp.ModbusInvalidMbapError as exc:
-                            print(exc)
-                            self._conn.close()
-                            print(self._addr, "disconnect!")
+                #         except modbus_tcp.ModbusInvalidMbapError as exc:
+                #             print(exc)
+                #             self._conn.close()
+                #             print(self._addr, "disconnect!")
                             
-                        '''
-                        TVM without Token
-                        '''
-                        self._conn.sendall(json.dumps(responseFromDevice).encode("utf-8"))
-                        # self._conn.sendall(json.dumps((1234, 2234, 3234)).encode("utf-8"))
-                        feadbackFromCP = self._conn.recv(1024).decode("utf-8")
+                #         '''
+                #         TVM without Token
+                #         '''
+                #         self._conn.sendall(json.dumps(responseFromDevice).encode("utf-8"))
+                #         # self._conn.sendall(json.dumps((1234, 2234, 3234)).encode("utf-8"))
+                #         feadbackFromCP = self._conn.recv(1024).decode("utf-8")
 
-                        '''
-                        TVM with Token
-                        '''
-                        # global jwtFromTTAS_TVM
-                        # # verify jwt from TVM via signature and decode it via rsa's public key
-                        # while True:
-                        #     try:
-                        #         decodedData = jwt.decode(jwtFromTTAS_TVM, jwt.decode(jwtFromTTAS_TVM
-                        #             , verify=False)["public_key"].encode("utf-8"), issuer=addr_defines.TTAS_IP
-                        #             , audience=addr_defines.TVM_IP, algorithm='RS256')
-                        #         break
-                        #     except jwt.InvalidSignatureError:
-                        #         connectTTAS()
-                        #     except jwt.DecodeError:
-                        #         connectTTAS()
-                        #     except jwt.ExpiredSignatureError:
-                        #         connectTTAS()
-                        #     except jwt.InvalidIssuerError:
-                        #         connectTTAS()
-                        #     except jwt.InvalidAudienceError:
-                        #         connectTTAS()
+                #         '''
+                #         TVM with Token
+                #         '''
+                #         # global jwtFromTTAS_TVM
+                #         # # verify jwt from TVM via signature and decode it via rsa's public key
+                #         # while True:
+                #         #     try:
+                #         #         decodedData = jwt.decode(jwtFromTTAS_TVM, jwt.decode(jwtFromTTAS_TVM
+                #         #             , verify=False)["public_key"].encode("utf-8"), issuer=addr_defines.TTAS_IP
+                #         #             , audience=addr_defines.TVM_IP, algorithm='RS256')
+                #         #         break
+                #         #     except jwt.InvalidSignatureError:
+                #         #         connectTTAS()
+                #         #     except jwt.DecodeError:
+                #         #         connectTTAS()
+                #         #     except jwt.ExpiredSignatureError:
+                #         #         connectTTAS()
+                #         #     except jwt.InvalidIssuerError:
+                #         #         connectTTAS()
+                #         #     except jwt.InvalidAudienceError:
+                #         #         connectTTAS()
                         
-                        # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps(responseFromDevice)).encode("utf-8")
-                        # # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps((1234, 2234, 3234))).encode("utf-8")
-                        # # print("response", response)
-                        # # time.sleep(12)
-                        # self._conn.sendall(response)
+                #         # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps(responseFromDevice)).encode("utf-8")
+                #         # # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps((1234, 2234, 3234))).encode("utf-8")
+                #         # # print("response", response)
+                #         # # time.sleep(12)
+                #         # self._conn.sendall(response)
 
-                        # # wait for feadback of control program
-                        # feadbackFromCP = self._conn.recv(1024).decode("utf-8")
+                #         # # wait for feadback of control program
+                #         # feadbackFromCP = self._conn.recv(1024).decode("utf-8")
                         
-                        # while True:
+                #         # while True:
                             
-                        #     # Token from TVM is legal
-                        #     if feadbackFromCP == "close":
-                        #         # print("Token from TVM is legal.")
-                        #         # self._conn.close()
-                        #         # print(self._addr, "disconnect!")
-                        #         break
+                #         #     # Token from TVM is legal
+                #         #     if feadbackFromCP == "close":
+                #         #         # print("Token from TVM is legal.")
+                #         #         # self._conn.close()
+                #         #         # print(self._addr, "disconnect!")
+                #         #         break
 
-                        #     # Token from TVM is illegal, resend verification information to TTAS
-                        #     else:
-                        #         # print(feadbackFromCP)
-                        #         connectTTAS()
-                        #         response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps(responseFromDevice)).encode("utf-8")
-                        #         # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps((1234, 2234, 3234))).encode("utf-8")
-                        #         self._conn.sendall(response)
-                        #         feadbackFromCP = self._conn.recv(1024).decode("utf-8")
+                #         #     # Token from TVM is illegal, resend verification information to TTAS
+                #         #     else:
+                #         #         # print(feadbackFromCP)
+                #         #         connectTTAS()
+                #         #         response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps(responseFromDevice)).encode("utf-8")
+                #         #         # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps((1234, 2234, 3234))).encode("utf-8")
+                #         #         self._conn.sendall(response)
+                #         #         feadbackFromCP = self._conn.recv(1024).decode("utf-8")
 
-                    except jwt.InvalidSignatureError:
-                        # print("Signature verification failed.")
-                        self._conn.sendall("Signature verification failed.".encode("utf-8"))
-                    except jwt.DecodeError:
-                        # print("Decode Error.")
-                        self._conn.sendall("Decode Error.".encode("utf-8"))
-                    except jwt.ExpiredSignatureError:
-                        # print("Signature has expired.")
-                        self._conn.sendall("Signature has expired.".encode("utf-8"))
-                    except jwt.InvalidAudienceError:
-                        # print("Audience is error.")
-                        self._conn.sendall("Audience is error.".encode("utf-8"))
-                    except jwt.InvalidIssuerError:
-                        # print("Issue is error.")
-                        self._conn.sendall("Issue is error.".encode("utf-8"))
-                    except jwt.InvalidIssuedAtError:
-                        # print("The time of the Token was issued which is error.")
-                        self._conn.sendall("The time of the Token was issued which is error.".encode("utf-8"))
-                else:
-                    self._conn.sendall("Token from control program is illegal.".encode("utf-8"))
+                #     except jwt.InvalidSignatureError:
+                #         # print("Signature verification failed.")
+                #         self._conn.sendall("Signature verification failed.".encode("utf-8"))
+                #     except jwt.DecodeError:
+                #         # print("Decode Error.")
+                #         self._conn.sendall("Decode Error.".encode("utf-8"))
+                #     except jwt.ExpiredSignatureError:
+                #         # print("Signature has expired.")
+                #         self._conn.sendall("Signature has expired.".encode("utf-8"))
+                #     except jwt.InvalidAudienceError:
+                #         # print("Audience is error.")
+                #         self._conn.sendall("Audience is error.".encode("utf-8"))
+                #     except jwt.InvalidIssuerError:
+                #         # print("Issue is error.")
+                #         self._conn.sendall("Issue is error.".encode("utf-8"))
+                #     except jwt.InvalidIssuedAtError:
+                #         # print("The time of the Token was issued which is error.")
+                #         self._conn.sendall("The time of the Token was issued which is error.".encode("utf-8"))
+                # else:
+                #     self._conn.sendall("Token from control program is illegal.".encode("utf-8"))
 
             
 
