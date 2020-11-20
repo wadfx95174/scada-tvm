@@ -1,5 +1,5 @@
 import socket, ssl, uuid
-from threading import Thread 
+from threading import Thread
 import json, jwt
 import time
 from modbus_tk import modbus_tcp
@@ -26,7 +26,9 @@ class ServerThread(Thread):
         Thread.__init__(self)
         self._conn = conn
         self._addr = addr
-        
+        self._master = modbus_tcp.TcpMaster("172.16.100.12", 502)
+        self._master.set_timeout(5.0)
+
     def run(self):
         global jwtFromTTAS_CP
         while True:
@@ -74,7 +76,7 @@ class ServerThread(Thread):
                 # self._conn.sendall(json.dumps(responseFromDevice).encode("utf-8"))
                 # # self._conn.sendall(json.dumps((1234, 2234, 3234)).encode("utf-8"))
                 # feadbackFromCP = self._conn.recv(1024).decode("utf-8")
-                
+
                 '''
                 other
                 '''
@@ -82,36 +84,50 @@ class ServerThread(Thread):
                 # print(dataFromTTASorCP)
                 jwtFromCP = s[0].encode("utf-8")
                 sensorDicFromCP = json.loads(s[1])
-
                 # "JWT from TTAS" and "JWT from control program" are the same
                 if jwtFromTTAS_CP == jwtFromCP:
                     try:
                         decodedData = jwt.decode(jwtFromCP, jwt.decode(jwtFromCP, verify=False)["public_key"].encode("utf-8")
                             , issuer=addr_defines.TTAS_IP, audience=self._addr[0], algorithm='RS256')
-                        # print(decodedData)
                         self._conn.sendall("Legal".encode("utf-8"))
 
                         """ TVM send request to device for request data or control device,
                             TVM send data(with token) obtained from device to control program """
-                        master = modbus_tcp.TcpMaster(sensorDicFromCP["converter_ip"], sensorDicFromCP["converter_port"])
+#                        while True:
+#                            if sensorDicFromCP["flag"]:
                         try:
-                            responseFromDevice = master.execute(
-                                slave=sensorDicFromCP["slave_id"]
-                                , function_code=sensorDicFromCP["function_code"]
-                                , starting_address=sensorDicFromCP["starting_address"]
-                                , quantity_of_x=sensorDicFromCP["quantity_of_x"])
-                            # print(responseFromDevice)
-
+                            responseFromDevice = self._master.execute(
+                                slave=sensorDicFromCP["slave_id"],
+                                function_code=sensorDicFromCP["function_code"],
+                                starting_address=sensorDicFromCP["starting_address"],
+                                quantity_of_x=sensorDicFromCP["quantity_of_x"]
+                            )
+#                            print ("sssuccess")
+#                            print (responseFromDevice)
+#                                    break
                         except modbus_tk.modbus.ModbusError as exc:
-                            print("%s- Code=%d", exc, exc.get_exception_code())
-                            self._conn.close()
-                            print(self._addr, "disconnect!")
+                            print (exc)
+                            responseFromDevice = "error"
+#                            else:
+#                                master = modbus_tcp.TcpMaster(sensorDicFromCP["converter_ip"], sensorDicFromCP["converter_port"])
+#                                master.set_timeout(2.0)
+#                                try:
+#                                    responseFromDevice = master.execute(
+#                                        slave=sensorDicFromCP["slave_id"]
+#                                        , function_code=sensorDicFromCP["function_code"]
+#                                        , starting_address=sensorDicFromCP["starting_address"]
+#                                        , quantity_of_x=sensorDicFromCP["quantity_of_x"])
+#                                    print ("success")
+#                                    master._do_close()
+#                                    break
+#                                except modbus_tk.modbus.ModbusError as exc:
+#                                    print(exc)
+#                                    responseFromDevice = "error"
+                            # time.sleep(0.05)
+                        # print (sensorDicFromCP["slave_id"])
 
-                        except modbus_tcp.ModbusInvalidMbapError as exc:
-                            print(exc)
-                            self._conn.close()
-                            print(self._addr, "disconnect!")
-                            
+                        # print (master)
+                        # print (responseFromDevice)
                         '''
                         TVM without Token
                         '''
@@ -140,7 +156,7 @@ class ServerThread(Thread):
                                 connectTTAS()
                             except jwt.InvalidAudienceError:
                                 connectTTAS()
-                        
+
                         response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps(responseFromDevice)).encode("utf-8")
                         # response = (jwtFromTTAS_TVM.decode("utf-8") + "+++++" + json.dumps((1234, 2234, 3234))).encode("utf-8")
                         # print("response", response)
@@ -149,9 +165,9 @@ class ServerThread(Thread):
 
                         # wait for feadback of control program
                         feadbackFromCP = self._conn.recv(1024).decode("utf-8")
-                        
+
                         while True:
-                            
+
                             # Token from TVM is legal
                             if feadbackFromCP == "close":
                                 # print("Token from TVM is legal.")
@@ -189,7 +205,7 @@ class ServerThread(Thread):
                 else:
                     self._conn.sendall("Token from control program is illegal.".encode("utf-8"))
 
-            
+
 
 # connect TTAS and send data to TTAS
 def connectTTAS():
@@ -215,7 +231,7 @@ def connectTTAS():
 
 def main():
 
-    # connectTTAS()
+#    connectTTAS()
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     # load private key and certificate file
@@ -228,7 +244,7 @@ def main():
         # avoid continuous port occupation
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((addr_defines.TVM_IP, addr_defines.TVM_PORT))
-        sock.listen(5)
+        sock.listen(50)
         # print ("Server start at: %s:%s" %(addr_defines.TVM_IP, addr_defines.TVM_PORT))
         # print ("Wait for connection...")
 
@@ -240,7 +256,7 @@ def main():
                     newThread = ServerThread(conn, addr)
                     newThread.start()
                     # newThread.join()
-                    
+
                 except KeyboardInterrupt:
                     break
 
